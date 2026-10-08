@@ -141,7 +141,21 @@ const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&am
 const getArea = id => SUPPORT_AREAS.find(area => area.id === id) || SUPPORT_AREAS[0];
 let activeFilter = 'all';
 let heroArea = 'family';
-let finder = {step:0, audience:'', area:''};
+// Supabase — 익명 이용 통계. 개인정보를 전직하지 않으며, 전송이 실패해도 페이지 동작에는 영향이 없다.
+const SUPABASE_URL = 'https://imlpobzsgrocwrheemnl.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ZFW_ZSb32wXl47tq3dlaBg_XUXsrvz3';
+function logFinderEvent(audience, area) {
+ if(!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || typeof fetch !== 'function') return;
+ try {
+  fetch(SUPABASE_URL + '/rest/v1/finder_events', {
+   method: 'POST',
+   headers: {apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal'},
+   body: JSON.stringify({audience: audience, area: area}),
+   keepalive: true
+  }).catch(() => {});
+ } catch (error) {}
+}
+let finder = {step:0, audience:'', area:'', logged:false};
 let currentGuideArea = null;
 let previousFocus = null;
 let toastTimer;
@@ -194,7 +208,7 @@ dialog.addEventListener('click', event => {
 const disclaimer = text => `<div class="modal-disclaimer">${svg('info')}<span>${text}</span></div>`;
 const officialLinks = () => `<div class="official-links"><a href="https://www.bokjiro.go.kr/ssis-tbu/" target="_blank" rel="noopener noreferrer">Visit Bokjiro ${svg('arrow-up')}<span class="sr-only"> (opens in a new tab)</span></a><a href="https://plus.gov.kr/" target="_blank" rel="noopener noreferrer">Visit Government24 ${svg('arrow-up')}<span class="sr-only"> (opens in a new tab)</span></a></div><p class="official-note">External public-service websites. These links open in a new tab; language options and availability may differ. Welflow does not transmit your selections to them.</p>`;
 
-function openFinder(area='') {finder={step:0,audience:'',area};renderFinder();}
+function openFinder(area='') {finder={step:0,audience:'',area,logged:false};renderFinder();}
 $$('[data-open-finder]').forEach(button => button.addEventListener('click', () => openFinder()));
 $('#hero-guide').addEventListener('click', () => openFinder(heroArea));
 function renderFinder() {
@@ -211,7 +225,7 @@ function renderFinder() {
   $('#finder-back').addEventListener('click',()=>{finder.step=0;renderFinder();});
   $('#finder-next').addEventListener('click',()=>{if(!finder.area)return;finder.step=2;renderFinder();});
  } else {
-  const area=getArea(finder.area);currentGuideArea=area;
+  const area=getArea(finder.area);currentGuideArea=area;if(!finder.logged){finder.logged=true;logFinderEvent(finder.audience,finder.area);}
   const audienceLabel={self:'For yourself',family:'For your family',other:'For someone you support'}[finder.audience];
   showDialog(`${steps}<span class="modal-eyebrow">03 / Your next step</span><h2 id="dialog-title">A clearer place to begin.</h2><p class="modal-description">Here is a starting guide for your selected topic—not a match to a verified benefit.</p><div class="guide-topic"><span class="card-icon ${area.id}">${svg(area.icon)}</span><div><strong>${escapeHtml(area.name)}</strong><small>${audienceLabel} · Illustrative guidance</small></div></div><ol class="guide-list"><li><strong>Put your main need into words.</strong>${escapeHtml(area.prompt)} You don’t need to write the answer in this demo.</li><li><strong>Prepare the questions that matter.</strong>${escapeHtml(area.questions[0])} ${escapeHtml(area.questions[2])}</li><li><strong>Confirm details through an official route.</strong>Ask about the current rules, required documents, application method, and next steps. Do not assume that a category match means you qualify.</li></ol>${officialLinks()}${disclaimer('No eligibility or payment amounts have been calculated. Program details, residence requirements, and document lists require official verification.')}<div class="modal-actions"><button class="button button-outline" id="finder-back">Back</button><button class="button button-dark" id="download-guide">${svg('download')} Save my checklist</button></div>`);
   $('#finder-back').addEventListener('click',()=>{finder.step=1;renderFinder();});
@@ -239,7 +253,7 @@ $('#open-professional').addEventListener('click',()=>{
  $('#download-toolkit').addEventListener('click',()=>{const checked=$$('.professional-options input').map(input=>input.checked);saveText('welflow-conversation-toolkit.txt',`WELFLOW — PROFESSIONAL CONVERSATION STARTER\nIllustrative checklist; not an official administrative form.\n\n${PROFESSIONAL_ITEMS.map(([title,description],i)=>`[${checked[i]?'x':' '}] ${title}\n    ${description}`).join('\n\n')}\n\nDo not record personal or case information in this demo. Follow your organization’s approved procedures. Verify program-specific rules and next steps through the relevant official service.\n`);});
 });
 $('#open-privacy').addEventListener('click',()=>{
- showDialog(`<span class="modal-eyebrow">About this demo</span><h2 id="dialog-title">Clarity includes the small print.</h2><div class="privacy-copy"><h3>An independent design concept</h3><p>Welflow is a fictional brand created to demonstrate a welfare-navigation startup homepage. It is not a government service, an operational benefits provider, or an endorsed partner. No user statistics, testimonials, certifications, or benefit amounts are represented.</p><h3>No personal data requested</h3><p>The page uses no account system, cookies, analytics, external fonts, trackers, or third-party scripts. Finder choices and searches exist only in page memory and are not sent to a server. Reloading the page resets the demo. Downloaded checklists are files on your device. If this file is hosted, the hosting provider may maintain its own request logs.</p><h3>External links and policy verification</h3><p>Bokjiro and Government24 are separate external destinations. Visiting them is subject to their own practices. This page does not read their databases, submit applications, or check eligibility. Verify all program rules, required documents, and application instructions with the relevant authority.</p><h3>Accessibility and use</h3><p>The interface supports keyboard navigation, visible focus indicators, native modal dialogs, responsive layouts, and reduced-motion preferences. No formal accessibility certification is claimed.</p></div><div class="modal-actions"><button class="button button-dark" id="privacy-close">Understood ${svg('check')}</button></div>`);
+ showDialog(`<span class="modal-eyebrow">About this demo</span><h2 id="dialog-title">Clarity includes the small print.</h2><div class="privacy-copy"><h3>An independent design concept</h3><p>Welflow is a fictional brand created to demonstrate a welfare-navigation startup homepage. It is not a government service, an operational benefits provider, or an endorsed partner. No user statistics, testimonials, certifications, or benefit amounts are represented.</p><h3>No personal data requested</h3><p>The page uses no account system, cookies, external fonts, trackers, or third-party scripts, and never asks for your name, contact details, or income. One anonymous event is recorded: when you reach the final finder step, the selected audience type and support area are sent to a Supabase database so the team can see which topics people explore. Nothing identifying is stored, searches stay in page memory, and the page still works if the request fails. Reloading the page resets the demo. Downloaded checklists are files on your device. If this file is hosted, the hosting provider may maintain its own request logs.</p><h3>External links and policy verification</h3><p>Bokjiro and Government24 are separate external destinations. Visiting them is subject to their own practices. This page does not read their databases, submit applications, or check eligibility. Verify all program rules, required documents, and application instructions with the relevant authority.</p><h3>Accessibility and use</h3><p>The interface supports keyboard navigation, visible focus indicators, native modal dialogs, responsive layouts, and reduced-motion preferences. No formal accessibility certification is claimed.</p></div><div class="modal-actions"><button class="button button-dark" id="privacy-close">Understood ${svg('check')}</button></div>`);
  $('#privacy-close').addEventListener('click',closeDialog);
 });
 const mobileToggle=$('#mobile-toggle');

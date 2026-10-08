@@ -13,7 +13,7 @@
 
 `index.html`을 Chrome 또는 Edge 등 브라우저로 여십시오. 별도 패키지 설치나 빌드가 필요하지 않습니다. HTML, CSS, JavaScript와 SVG 아이콘이 하나의 파일에 포함되어 있습니다.
 
-일반적인 정적 웹 호스팅에 게시할 때도 이 파일을 첫 페이지로 사용할 수 있습니다. 실제 인터넷 사이트로 배포하는 작업은 수행하지 않았습니다.
+일반적인 정적 웹 호스팅에 게시할 때도 이 파일을 첫 페이지로 사용할 수 있습니다. 이 저장소에는 GitHub Pages 배포 워크플로(`.github/workflows/deploy-pages.yml`)가 포함되어 있어 `main` 브랜치에 푸시하면 자동으로 배포됩니다.
 
 ## 구현 기능
 
@@ -25,6 +25,7 @@
 | 파일 저장 | 분야별 상담 준비 질문 및 담당자 체크리스트를 TXT로 저장 |
 | 담당자 도구 | 상담 준비 항목 체크, 출력, TXT 저장 |
 | 외부 이동 | 복지로, 정부24 링크 |
+| 이용 통계 | 시작 안내 마지막 단계 도달 시 이용 대상 유형과 관심 분야를 Supabase에 익명 기록 |
 | 부가 요소 | 모바일 메뉴, 질문 펼치기, 개인정보·시연 범위 안내 |
 | 접근성 고려 | 키보드 조작, 초점 표시, 본문 바로가기, 기본 모달 동작, 동작 감소 설정 대응 |
 
@@ -45,9 +46,78 @@ Welflow는 실제 운영 기업 또는 정부기관을 나타내지 않는 **가
 
 ## 데이터 처리
 
-페이지는 계정, 주민등록번호, 연락처, 소득 등 개인정보를 요청하지 않습니다. 선택과 검색은 현재 페이지의 메모리에서만 처리되며 서버로 전송하지 않습니다. 쿠키, 분석 도구, 외부 폰트, 추적 스크립트, 제3자 스크립트는 포함하지 않았습니다.
+페이지는 계정, 주민등록번호, 연락처, 소득 등 개인정보를 요청하지 않습니다. 쿠키, 외부 폰트, 추적 스크립트, 제3자 스크립트는 포함하지 않았습니다. 검색어와 화면 상태는 현재 페이지의 메모리에서만 처리합니다.
+
+한 가지 예외가 있습니다. 시작 안내의 마지막 단계에 도달하면 선택한 **이용 대상 유형**(`self`/`family`/`other`)과 **관심 분야**(`family`/`housing`/`income`/`health`/`access`/`aging`) 두 값이 Supabase에 기록됩니다. 어떤 주제를 많이 탐색하는지 파악하기 위한 익명 집계이며, 이름·연락처·자유 입력 내용·식별자는 저장하지 않습니다. 전송이 실패해도 페이지 동작에는 영향이 없습니다.
 
 직접 저장한 TXT 파일은 이용자 기기에 남습니다. 홈페이지를 별도 서버에 게시하면 호스팅 사업자의 접속 로그가 발생할 수 있으므로 운영 단계에서 별도 확인이 필요합니다. 외부 사이트로 이동한 뒤에는 해당 사이트의 정책이 적용됩니다.
+
+## 배포
+
+빌드 과정이 없는 정적 사이트이므로 두 경로를 모두 준비했습니다.
+
+### GitHub Pages
+
+`.github/workflows/deploy-pages.yml`이 `main` 브랜치 푸시에 반응합니다. `actions/configure-pages`의 `enablement: true`가 Pages 활성화까지 처리하므로 별도 설정이 필요하지 않습니다. 무료 계정에서는 저장소가 공개 상태여야 합니다.
+
+주소: `https://<계정>.github.io/welflow-website/`
+
+### Vercel
+
+`vercel.json`에 정적 서빙 설정과 기본 보안 헤더를 넣었습니다. 프레임워크 설정 없이 `index.html`이 루트로 서빙됩니다.
+
+```sh
+npx vercel login
+npx vercel deploy --prod
+```
+
+GitHub 저장소를 Vercel 대시보드에 연결하면 이후 푸시마다 자동 배포됩니다.
+
+## Supabase 연동
+
+익명 이용 통계를 Supabase Postgres에 기록합니다.
+
+| 항목 | 값 |
+|---|---|
+| 프로젝트 | `imlpobzsgrocwrheemnl` (ap-southeast-2) |
+| 테이블 | `public.finder_events` |
+| 컬럼 | `id`, `created_at`, `audience`, `area` |
+| 전송 방식 | PostgREST에 `fetch` POST, 외부 SDK 없음 |
+
+### 보안 설정
+
+- RLS 활성화 후 `anon`·`authenticated` 역할에 **insert 정책만** 부여했습니다.
+- 같은 역할에서 `select`, `update`, `delete` 권한을 회수했습니다. 공개된 publishable key로는 기록을 읽거나 수정할 수 없습니다.
+- `audience`, `area`에 `check` 제약을 걸어 정의된 값만 저장됩니다.
+
+동작을 확인한 결과입니다.
+
+| 요청 | 결과 |
+|---|---|
+| 정상 insert | `201` |
+| 익명 select | `401` (차단) |
+| 정의되지 않은 값 insert | `400` (제약 위반) |
+
+### 집계 조회
+
+기록은 프로젝트 소유자만 읽을 수 있습니다. Supabase 대시보드의 SQL Editor에서 확인하십시오.
+
+```sql
+select area, audience, count(*)
+from public.finder_events
+group by area, audience
+order by count(*) desc;
+```
+
+### 연동 끄기
+
+`index.html`의 `SUPABASE_URL` 또는 `SUPABASE_PUBLISHABLE_KEY`를 빈 문자열로 두면 전송하지 않습니다.
+
+운영 단계에서는 다음을 확인해야 합니다.
+
+- 익명 통계 수집에 대한 이용자 안내 및 동의 방식: **[확인 필요]**
+- 봇 요청으로 인한 기록 왜곡 방지 수단: **[확인 필요]**
+- 기록 보관 기간 및 삭제 주기: **[확인 필요]**
 
 ## 연결한 외부 자료
 
@@ -67,6 +137,9 @@ Chromium 브라우저에서 HTML을 렌더링하여 화면과 기능을 점검�
 - `index.html`: 홈페이지 전체 소스 및 실행 파일
 - `README.md`: 실행·편집·시연 범위 안내
 - `qa-results.json`: 자동 점검 결과
+- `.github/workflows/deploy-pages.yml`: GitHub Pages 배포 워크플로
+- `.nojekyll`: Jekyll 처리 비활성화
+- `vercel.json`: Vercel 배포 설정
 - `previews/`: PC·모바일 화면 이미지
 
 ## 편집 위치
