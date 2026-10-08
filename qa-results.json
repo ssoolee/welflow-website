@@ -1,0 +1,125 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "desktop_card_count": 6
+    },
+    {
+      "viewport": 320,
+      "dimensions": {
+        "width": 320,
+        "scroll": 320,
+        "height": 4692
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 375,
+      "dimensions": {
+        "width": 375,
+        "scroll": 375,
+        "height": 4642
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 390,
+      "dimensions": {
+        "width": 390,
+        "scroll": 390,
+        "height": 4546
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 560,
+      "dimensions": {
+        "width": 560,
+        "scroll": 560,
+        "height": 4499
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 768,
+      "dimensions": {
+        "width": 768,
+        "scroll": 768,
+        "height": 4068
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 850,
+      "dimensions": {
+        "width": 850,
+        "scroll": 850,
+        "height": 4033
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 1024,
+      "dimensions": {
+        "width": 1024,
+        "scroll": 1024,
+        "height": 3099
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 1280,
+      "dimensions": {
+        "width": 1280,
+        "scroll": 1280,
+        "height": 3525
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 1440,
+      "dimensions": {
+        "width": 1440,
+        "scroll": 1440,
+        "height": 3525
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "viewport": 1920,
+      "dimensions": {
+        "width": 1920,
+        "scroll": 1920,
+        "height": 3166
+      },
+      "no_horizontal_overflow": true
+    },
+    {
+      "search_and_empty_reset": "passed"
+    },
+    {
+      "category_filter": "passed"
+    },
+    {
+      "finder_housing_and_download": "passed"
+    },
+    {
+      "topic_modal": "passed"
+    },
+    {
+      "professional_toolkit_download": "passed"
+    },
+    {
+      "privacy_modal": "passed"
+    },
+    {
+      "faq_accordion": "passed"
+    },
+    {
+      "mobile_navigation": "passed"
+    },
+    {
+      "mobile_finder": "passed"
+    }
+  ]
+}
